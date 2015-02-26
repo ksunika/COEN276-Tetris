@@ -1,0 +1,820 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<title>Tetris by Xenia Serbin</title>
+</head>
+<style>
+
+input{
+	font-family: Georgia;
+	font-size: 20px;
+	color: #2685dd;
+	text-align: center;
+}
+.vertical {
+	float: left;
+	background-color: white;
+	width: 225px;
+	height: 500px
+}
+
+#debug {
+	background-color: white;
+	width: 675px;
+	height: 30px
+}
+#title {
+	background-color: white;
+	width: 675px;
+	height: 50px;
+	text-align: center;
+	font-family: Georgia;
+	font-size: 50px;
+	color: #2685dd;
+}
+#subtitle {
+	background-color: white;
+	width: 675px;
+	height: 30px;
+	text-align: center;
+	font-family: Georgia;
+	font-size: 30px;
+	color: #2685dd;
+}
+
+
+li{
+	text-align: justify;
+	padding: 15px;
+}
+
+.divButtons {
+	width: 120px;
+	height: 50px;
+	border-width: 1px;
+	border-color: #dd2685;
+	background-color: white;
+	margin-left: 20px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	border-radius: 5px;
+	text-align: center;
+	font-size: large;
+	padding-top: 5px;
+	color: #dd2685;
+	font-family: Georgia;
+}
+
+.divButtons:hover {
+	color: 	white;
+	background-color: #dd2685;
+}
+
+.top {
+	height: 20px;
+}
+div#message {
+    position: fixed;
+    top: 100px;
+    left: 155px;
+    width: 480px;
+   
+	padding-top: 10px;
+	padding-bottom: 30px;
+	padding-left:30px;
+	padding-right:30px;
+	border-width: 2px;
+	border-style: solid;
+	border-color: #8f5a38;
+	background-color: #1a5d9a;
+	border-radius: 5px;
+	text-align: center;
+	font-size: large;
+	color: white;
+	vertical-align: text-top;
+	font-family: Georgia;
+}
+#lines{
+	color: 	#dd2685;
+	font-size: large;
+	font-family: Georgia;
+
+}
+#score{
+	color: 	#dd2685;
+	font-size: large;
+	font-family: Georgia;
+
+}
+</style>
+
+
+<body>
+
+	<!-- top-->
+	<div id="title">TETRIS</div>
+	<div id="subtitle">by Xenia Serbin</div>
+	<div id="debug"></div>
+
+	<!-- left-->
+	<div class="vertical">
+		<div class="top"></div>
+
+		<button class="divButtons" onclick="startNewGame()" id = "startButton">Start</button>
+		<button class="divButtons" onclick="pauseGame()" id = "pauseButton">Pause</button>
+		<button class="divButtons" onclick="endGame()">End</button>
+		<button class="divButtons" onclick="goHighScores()">High Scores</button>
+		<button class="divButtons" onclick="rules()">How to Play</button>
+	</div>
+	<!-- playfield -->
+	<div class="vertical" style="color: white">
+
+
+		<canvas id="canvasPlayfield" width="200px" height="400px">
+            Your browser does not support the HTML5 canvas tag.</canvas>
+
+	</div>
+	<!-- right-->
+	<div class="vertical">
+
+
+
+		<p id="score">Score:</p>
+		<p id="lines">Lines:</p>
+		<canvas id="canvasNext" width="140px" height="90px">
+            Your browser does not support the HTML5 canvas tag.</canvas>
+
+	</div>
+	
+	<script
+		src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script>
+    
+    /*
+    colors:
+    blue J: #1DB7ED
+    magenta T: #B32BA9
+    green S:#6AC60D
+    gold O: #FFC42A
+    orange L: #FF7312
+    red Z: #E94E77
+    cyan I: #73E9CF
+    
+    playfield: 10w by 22h (of which 20 visible)
+    */
+    
+    
+    
+var field = document.getElementById("canvasPlayfield");
+var ctx = field.getContext("2d");
+
+ctx.fillStyle = 'white';
+
+ctx.fillRect(0, 0, field.width, field.height);
+ctx.strokeStyle = '#85dd26';
+ctx.lineWidth=2;
+ctx.strokeRect(0, 0, field.width, field.height);
+
+
+
+var next = document.getElementById("canvasNext");
+var nctx = next.getContext("2d");
+
+nctx.fillStyle = 'white';
+nctx.fillRect(0, 0, next.width, next.height);
+nctx.strokeStyle = '#85dd26';
+nctx.lineWidth=2;
+nctx.strokeRect(0, 0, next.width, next.height);
+
+
+
+var dx = field.width / 10; // pixel size of a single tetris block
+var dy = field.height / 20;
+
+var paused = false;
+
+rules();
+
+function blockDraw(x, y, ctx, color){
+    border=1;
+    ctx.fillStyle = color;  
+    ctx.fillRect(x*dx+border, y*dy+border, dx-2*border, dy-2*border);
+   
+}
+
+
+//shapes:
+var tShape =
+        ["010"+
+         "111"+
+         "000",
+         
+         "010"+
+         "011"+
+         "010",
+         
+         "000"+
+         "111"+
+         "010",
+         
+         "010"+
+         "110"+
+         "010"];
+
+var jShape =
+        ["100"+
+         "111"+
+         "000",
+         
+         "011"+
+         "010"+
+         "010",
+         
+         "000"+
+         "111"+
+         "001",
+         
+         "010"+
+         "010"+
+         "110"];
+
+var lShape =
+
+        ["001"+
+         "111"+
+         "000",
+         
+         "010"+
+         "010"+
+         "011",
+         
+         "000"+
+         "111"+
+         "100",
+         
+         "110"+
+         "010"+
+         "010"];
+
+var sShape =
+        ["011"+
+         "110"+
+         "000",
+         
+         "010"+
+         "011"+
+         "001",
+         
+         "000"+
+         "011"+
+         "110",
+         
+         "100"+
+         "110"+
+         "010"];
+
+var zShape =
+        ["110"+
+         "011"+
+         "000",
+         
+         "001"+
+         "011"+
+         "010",
+         
+         "000"+
+         "110"+
+         "011",
+         
+         "010"+
+         "110"+
+         "100"];
+
+var oShape =
+        ["011"+
+         "011"+
+         "000",
+         
+         "011"+
+         "011"+
+         "000",
+         
+         "011"+
+         "011"+
+         "000",
+         
+         "011"+
+         "011"+
+         "000"];
+
+var iShape =
+        ["0000"+
+         "1111"+
+         "0000"+
+         "0000",
+         
+         "0010"+
+         "0010"+
+         "0010"+
+         "0010",
+         
+         "0000"+
+         "0000"+
+         "1111"+
+         "0000",
+         
+         "0100"+
+         "0100"+
+         "0100"+
+         "0100"];
+
+var backgroundColor = "white";
+var fallInterval;
+
+function rules(){
+	
+	var element = document.getElementById("message");
+	if (element != null){element.parentNode.removeChild(element)};
+	
+	if (document.getElementById("pauseButton").innerHTML == "Pause"){
+		pauseGame();
+	}
+	var div = document.createElement('div');
+	document.body.appendChild(div);
+	div.id = 'message';
+	
+	div.onclick=function(){
+		var element = document.getElementById('message');
+		element.parentNode.removeChild(element);
+		if (document.getElementById("pauseButton").innerHTML == "Unpause"){
+			pauseGame();
+		}
+	};
+
+	div.innerHTML = '<H3>How to Play Tetris</h3><ul>';
+	div.innerHTML = div.innerHTML + '<li>To start the game, press Start button</li>';
+	div.innerHTML = div.innerHTML + '<li>To pause the game, press Pause button</li>';
+	div.innerHTML = div.innerHTML + '<li>To end the game, press End button</li>';
+	div.innerHTML = div.innerHTML + '<li>To see High Scores, press High Scores</li>';
+	div.innerHTML = div.innerHTML + '<li>To shift the pieces, use left and right arrows</li>';
+	div.innerHTML = div.innerHTML + '<li>To rotate the pieces, use up and down arrows</li>';
+	div.innerHTML = div.innerHTML + '<li>To drop the pieces, use space</li>';
+	div.innerHTML = div.innerHTML + '<li>To close this window, cick anywhere on it</li>';
+	div.innerHTML = div.innerHTML + '</ul>';
+
+}
+
+function goHighScores(){
+	window.open("scores.php","_self");
+}
+function startNewGame(){
+	paused = false;
+	var element = document.getElementById("message");
+	if (element != null){element.parentNode.removeChild(element)};
+	
+	if (document.getElementById("startButton").innerHTML == "Start"){
+		document.getElementById("startButton").innerHTML = "Restart";
+	}
+	
+	document.getElementById("pauseButton").innerHTML = "Pause";	
+	blankPlayField();
+	redrawPlayfield();
+	speed = 3;
+
+	refresh();
+	refresh();
+}
+
+function pauseGame(){
+	var element = document.getElementById("message");
+	if (element != null){element.parentNode.removeChild(element)};
+	
+	if (document.getElementById("pauseButton").innerHTML == "Pause"){
+		clearInterval(fallInterval);
+		paused = true;
+		
+		document.getElementById("pauseButton").innerHTML = "Unpause";
+	}
+	else {
+		document.getElementById("pauseButton").innerHTML = "Pause";
+		paused = false;
+		fallInterval=setInterval(function(){fallShape()},3000/speed);
+	}
+	
+
+}
+
+function endGame(){
+	var element = document.getElementById("message");
+	if (element != null){element.parentNode.removeChild(element)};
+	
+	
+	if (score > 0){
+		var myNode = document.body;
+		while (myNode.firstChild) {
+		    myNode.removeChild(myNode.firstChild);
+		}
+		
+		//create a form for score and name
+		
+		var div = document.createElement('div');
+		document.body.appendChild(div);
+		div.id = 'message';
+		
+		
+		div.innerHTML = '<form action="scores.php" target = "_self" method ="POST">Your name:<br>'+
+		'<input type="text" name="name" >'+
+		'<br>Your score:<br>'+
+		'<input type="text" readonly="readonly" name="score" value="' + score.toString() + '">	<br><br>'+
+		'<input type="submit" value="Submit"></form>';
+	}
+	
+	else {
+		var div = document.createElement('div');
+		document.body.appendChild(div);
+		div.id = 'message';
+		
+		clearInterval(fallInterval);
+		blankPlayField();
+		redrawPlayfield();
+		
+		div.innerHTML = 'Your game is over and your score is zero';
+		
+		
+		div.onclick=function(){
+			var element = document.getElementById('message');
+			element.parentNode.removeChild(element);
+			
+
+		};
+	}
+		
+}
+         
+function setNextShape(){
+    
+    currentColor = nextColor;
+    currentShape = nextShape;
+    turn = 0;
+    
+    shapeX = 4;
+    shapeY = -2;
+    
+    var allShapes = Array(tShape,oShape,jShape,lShape,zShape,sShape,iShape);
+    var allColors = Array('#B32BA9','#FFC42A','#1DB7ED','#FF7312','#E94E77','#6AC60D','#73E9CF');
+    var index = Math.floor(Math.random()*(allShapes.length));
+    
+   // document.getElementById("debug").innerHTML = "index: "+index+ " current shape: "+currentShape;
+    
+    nextShape = allShapes[index];
+    nextColor = allColors[index];
+
+    
+}
+
+
+function shapeDraw(shape, positionX, positionY, context, color){
+    
+    for (i = 0; i< shape.length; i++){
+        var dimension = setDimension(shape);
+        if (shape.charAt(i) == '1') {
+            blockDraw(positionX+i%dimension-1,positionY+Math.floor(i/dimension), context, color);
+        }
+    }
+}
+
+
+
+function setDimension(shape){
+    if (shape.length == 9) {
+        var dimension = 3;
+    }
+    if (shape.length == 16) {
+        var dimension = 4;
+    }
+    return dimension;
+}
+
+
+function shapeClear(shape, positionX, positionY, context){
+    
+    for (i = 0; i< shape.length; i++){
+        var dimension = setDimension(shape);
+        if (shape.charAt(i) == '1') {
+            blockDraw(positionX+i%dimension-1,positionY+Math.floor(i/dimension), context, backgroundColor);
+        }
+    }
+}
+
+function refresh() {
+	
+	if (continueGame){
+	redrawPlayfield();
+	shapeClear(nextShape[0], 3, 1, nctx);  
+    setNextShape();
+    
+    shapeDraw(nextShape[0], 3, 1, nctx, nextColor);
+    shapeDraw(currentShape[turn%4], 4, -2, ctx, currentColor);
+    clearInterval(fallInterval);
+    
+    fallInterval=setInterval(function(){fallShape()},3000/speed);
+    
+	}
+	
+	else {
+		endGame();
+	}
+    
+}
+
+
+function fallShape() { 
+	paused = true;
+	if (continueGame){
+    	if (!ifFit()){
+    		freezeCurrent();  	
+    		refresh();
+    	
+    	}
+    	else{
+   			shapeClear(currentShape[turn%4], shapeX, shapeY++, ctx);
+    		shapeDraw(currentShape[turn%4],shapeX, shapeY, ctx, currentColor);
+    	}
+	}
+	paused = false;
+       
+}
+
+function redrawPlayfield(){
+	ctx.fillStyle=backgroundColor;
+	ctx.fillRect(0, 0, 200, 400);
+
+	
+	
+	for (i = 0; i < 10; i++){
+		for (j = 0; j < 20; j++){
+			blockDraw(i, j, ctx, playFieldColor[i][j]);
+		}
+	}
+	ctx.strokeStyle = '#85dd26';
+	ctx.lineWidth=2;
+	ctx.strokeRect(0, 0, field.width, field.height);
+ 
+}
+
+var continueGame = true;
+
+function freezeCurrent(){ //save 1's in the internal array
+	
+	if (shapeY == -2){
+		continueGame = false;
+	}
+	
+	var shape = currentShape[turn%4];
+	var x = shapeX;
+	var y = shapeY;
+	var dimension = setDimension(shape);
+	
+	for (k = 0; k < shape.length; k++){
+ 		
+        if (shape.charAt(k) == '1') {
+            playField[shapeX+k%dimension-1][shapeY+Math.floor(k/dimension)] = 1;
+            playFieldColor[shapeX+k%dimension-1][shapeY+Math.floor(k/dimension)] = currentColor; 
+            	            
+        }
+ 	}
+
+	deleteLine();
+	
+}
+
+ function deleteLine(){
+	//var count = 0;
+	for (j = 0; j < 20; j++) {
+		var line = 1;
+		var count = 0;
+		for (i = 0; i < 10; i++) {
+			line = line*playField[i][j];
+		}
+		if (line == 1){
+			totalLines++;
+			score += speed*100;
+			document.getElementById("lines").innerHTML =  "Lines: "+ totalLines;
+			document.getElementById("score").innerHTML =  "Score: "+ score;
+			if (totalLines%5 == 0){
+				speed++;
+			}
+			slideDown(j);	
+			count++;
+			
+		}
+	}
+	//document.getElementById("debug").innerHTML = "count: "+count;	
+}
+
+function slideDown(k){
+
+	for (j = k; j >0; j--) {
+		
+		for (i = 0; i < 10; i++) {	
+			playField[i][j] = playField[i][j-1];	
+			playFieldColor[i][j] = playFieldColor[i][j-1];
+		}
+	}
+	redrawPlayfield();
+	deleteLine();
+}
+
+
+function ifFit(){
+	var shape = currentShape[turn%4];
+	var x = shapeX;
+	var y = shapeY;
+	
+ 	for (k = 0; k < shape.length; k++){
+ 		
+ 		var dimension = setDimension(shape);
+        if (shape.charAt(k) == '1') {
+            if (playField[shapeX+k%dimension-1][shapeY+Math.floor(k/dimension)+1] == 1){
+            	return false;
+            }
+            
+        }
+ 	}
+ 	
+ 	return true;	
+}
+
+
+ function borderHit(){
+	var shape = currentShape[turn%4];
+	var x = shapeX;
+	var y = shapeY;
+	
+ 	 for (k = 0; k < shape.length; k++){
+ 		
+ 		var dimension = setDimension(shape);
+         if (shape.charAt(k) == '1') {
+            if ((shapeX+k%dimension-1) == -1 || (shapeX+k%dimension-1) == 10) {	  
+            	return true;
+            }       
+         } 
+ 	 }
+	return false;	
+} 
+
+
+
+function moveRight(){
+	
+	shapeX++;
+	
+	if (borderHit() || !ifFit()){
+		shapeX--;
+	}
+	else {
+		shapeX--;
+		shapeClear(currentShape[turn%4], shapeX++, shapeY, ctx);
+		shapeDraw(currentShape[turn%4], shapeX, shapeY, ctx, currentColor);
+	}
+	
+    
+	
+}
+
+function moveLeft(){
+		
+ 	shapeX--;
+	if (borderHit() || !ifFit()){
+		shapeX++;
+	}
+	else {
+		shapeX++;
+		shapeClear(currentShape[turn%4], shapeX--, shapeY, ctx);
+	    shapeDraw(currentShape[turn%4], shapeX, shapeY, ctx, currentColor);
+	}
+	
+	
+}
+
+function turnShapeClockwise(){
+	
+	turn++;
+	
+	if (borderHit() || !ifFit()){
+		turn--;
+	}
+	else {
+		turn--;
+		shapeClear(currentShape[turn++%4], shapeX, shapeY, ctx);
+		shapeDraw(currentShape[turn%4], shapeX, shapeY, ctx, currentColor);
+		
+	}	
+}
+
+function turnShapeCounterClockwise(){
+	
+	turn += 3;
+	
+	if (borderHit() || !ifFit()){
+		turn -= 3;
+	}
+	else {
+		turn -= 3;
+		shapeClear(currentShape[turn%4], shapeX, shapeY, ctx);
+		turn += 3;
+		shapeDraw(currentShape[turn%4], shapeX, shapeY, ctx, currentColor);
+		
+	}	
+	
+}
+
+$(document).keydown(function(e){
+    if (e.keyCode == 39 && !paused) { 
+       //alert( "right arrow pressed" );
+       moveRight();
+       return false;
+    }
+});
+
+$(document).keydown(function(e){
+    if (e.keyCode == 37 && !paused) { 
+       //alert( "left arrow pressed" );
+       moveLeft();
+       return false;
+    }
+});
+
+$(document).keydown(function(e){
+    if (e.keyCode == 38 && !paused) { 
+       //alert( "up arrow pressed" );
+       turnShapeClockwise();
+       return false;
+    }
+});
+
+$(document).keydown(function(e){
+    if (e.keyCode == 40 && !paused) { 
+       //alert( "up arrow pressed" );
+       turnShapeCounterClockwise();
+       return false;
+    }
+});
+
+$(document).keydown(function(e){
+    if (e.keyCode == 32 && !paused) { 
+    	clearInterval(fallInterval);
+    	fallInterval = setInterval(function(){fallShape(shapeX,shapeY)},0);
+       //alert( "space pressed" );
+       return false;
+    }
+});
+
+function blankPlayField(){
+
+	for (i = 0; i < 10; i++) {
+		
+		playField[i] = new Array();
+		for (j = 0; j < 20; j++) {
+			playField[i][j] = 0;
+		}
+		playField[i][20] = 1;
+	}
+	
+	
+	
+	for (i = 0; i < 10; i++) {
+		
+		playFieldColor[i] = new Array();
+		for (j = 0; j < 20; j++) {
+			playFieldColor[i][j] = backgroundColor;
+		}
+	}
+}
+
+var playField = new Array();
+var playFieldColor = new Array();
+
+var shapeX = 4;
+var shapeY = -2;
+
+var currentColor;
+var nextColor;
+
+var currentShape = iShape;
+var nextShape = iShape;
+
+var turn = 0;
+var speed = 3;
+var totalLines = 0;
+var score = 0;
+
+document.getElementById("lines").innerHTML = "Lines: "+ totalLines;
+document.getElementById("score").innerHTML = "Score: "+ score;
+
+
+
+</script>
+</body>
+</html>
