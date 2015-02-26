@@ -3,9 +3,9 @@
 
 function databaseConnect(){
 	
-	$servername = "mysql6.000webhost.com";
-	$username = "a8960111_tetris";
-	$password = "1234pass";
+	$servername = "server";
+	$username = "username";
+	$password = "password";
 	// Create connection
 	$conn = mysqli_connect($servername, $username, $password);
 	// Check connection
